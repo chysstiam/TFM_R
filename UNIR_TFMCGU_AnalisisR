@@ -1,0 +1,72 @@
+#   Autor: Cristian Guanín
+#   TFM: Marketing Analytics -  Caso Mailing
+#   2021-2022 
+#   Libreria para lectura xlsx
+#   Descripción: 
+#                -Se extrae información de correos electrónicos
+#                 y se genera un modelo Logit para predecir el día, hora y de la semana
+#                 para realizar envios masivos.
+#                       
+library(readxl)
+library(pROC)
+library(lessR)
+library("DataExplorer")
+
+DataSetMailing <- read_excel("F:/1. Datos Trabajo/Analitica de Datos/Estudio/DataSetMailing.xlsx", 
+                             sheet = "Hoja1")
+
+#Se obtiene la mediana de los datos de Mail
+mm=median(DataSetMailing$Mail)
+
+#Agregamos 0,1 en caso de existir un número de acceso al correo electrónico mayor al 11
+DataSetMailing$y=(DataSetMailing$Mail>mm)*1
+
+#Describe el nombre de las columnas
+names(DataSetMailing)
+
+#Visualiza los datos
+View(DataSetMailing)
+
+#Modelo logic con las variables dependientes e independentes Opendate_D+Opendate_H+OperatingSystem+Prov 
+modeloLogit=glm(y~Opendate_D+Opendate_H+OperatingSystem+Prov,data=DataSetMailing)
+
+# Resumen del modelo
+summary(modeloLogit)
+
+#Predecimos al modelo
+aux_pred <- predict(modeloLogit,type = "response")
+
+
+# Curva ROC 
+# En la teoría de detección de señales, una curva ROC es una 
+# representación gráfica de la sensibilidad frente a la 
+# especificidad para un sistema clasificador binario 
+# según se varía el umbral de discriminación
+g <- roc(y~aux_pred, data = DataSetMailing )
+
+# Graficamos ROC
+plot(g, print.thres=TRUE)
+
+(corte <- as.numeric(coords(g, "best", transpose = FALSE)[1]))
+
+# Resumen de la predicción
+summary(aux_pred)
+
+# Generamos la matriz de confusión
+addmargins(table(DataSetMailing$y,aux_pred>corte  ))
+
+# Genera gráficos estadísticos que nos ayudan al 
+# análisis descriptivo y conocer más los datos
+create_report(DataSetMailing)
+
+
+# Diagrama de dispersión 
+plot(DataSetMailing$Opendate_H, y = DataSetMailing$Mail, main = "Open  Mail - Hora", 
+     xlab = "Hora", ylab = "Mail", 
+     col = c("orange3", "yellow3", "green3", "grey"))
+
+# Diagrama de pastel
+PieChart(SentDate, hole = 0, values = "%", data = DataSetMailing, fill = 1:6, main = "SentDate - Mail")
+
+
+
